@@ -1,4 +1,5 @@
-#crossfire_poc.py POC Exploit for crossfire game in linux 32bit 486 debian kenral
+#!/usr/bin/python
+#crossfire_poc.py POC Exploit for crossfire game in linux 32bit 486 debian kernel
 import socket
 import sys
 
