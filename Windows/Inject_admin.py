@@ -17,10 +17,10 @@ user = base64.b64decode(user_string)
 passwd = base64.b64decode(pass_string)
 
 response = os.system("net user " + user + " " + passwd + " /add")
-if "The command completed successfully." in response:
+if "successfully" in str(response):
     status = "Success"
     response = os.system("net localgroup administrators " + user + " /add")
-    if "The command completed successfully." not in response:
+    if "successfully" not in str(response):
         status = "Failure"
 else:
     status = "Failure"
