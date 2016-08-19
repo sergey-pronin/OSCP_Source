@@ -1,5 +1,5 @@
 #This script creates a user and adds it to local admin group
-#The script needs to be compiled to exe and injected into a service running System privs
+#The script needs to be compiled to exe and injected into a service running System privs.
 import requests, time, os, base64
 
 #Base64 encoded string with requestbin address.  See http://requestb.in/ for more info.
